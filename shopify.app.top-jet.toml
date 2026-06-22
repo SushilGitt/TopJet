@@ -1,24 +1,34 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "cbe3ae2a4fe9a56948625b85fafe317b"
-name = "Top Jet"
-application_url = "https://qui-diffs-hewlett-todd.trycloudflare.com"
+name = "TopJet"
+application_url = "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io"
 embedded = true
+
+[build]
+# Keep prod URLs stable — do NOT let `shopify app dev` overwrite them with a tunnel URL
+automatically_update_urls_on_dev = false
 
 [webhooks]
 api_version = "2026-07"
 
+  [[webhooks.subscriptions]]
+  uri = "/api/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = ""
+scopes = "write_products,read_products"
+use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://qui-diffs-hewlett-todd.trycloudflare.com/auth/callback",
-  "https://qui-diffs-hewlett-todd.trycloudflare.com/auth/shopify/callback",
-  "https://qui-diffs-hewlett-todd.trycloudflare.com/api/auth/callback"
+  "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/auth/callback",
+  "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/auth/shopify/callback",
+  "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/api/auth/callback"
 ]
 
-[build]
-include_config_on_deploy = true
-automatically_update_urls_on_dev = true
+[app_proxy]
+url = "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/api/scroll-to-top"
+subpath = "scroll-to-top"
+prefix = "apps"
