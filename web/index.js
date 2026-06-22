@@ -200,19 +200,26 @@ app.get("/api/debug/graphql", async (req, res) => {
     (await collection.findOne({ id: `offline_${shop}` })) ||
     (await collection.findOne({ shop }));
   if (!raw) return res.status(404).send({ error: "no session for shop" });
+  const token = raw.accessToken || "";
   const info = {
     id: raw.id,
     isOnline: raw.isOnline,
-    tokenLen: (raw.accessToken || "").length,
+    tokenPrefix: token.slice(0, 6),
+    tokenLen: token.length,
     scope: raw.scope,
   };
-  try {
-    const client = new shopify.api.clients.Graphql({ session: raw });
-    const r = await client.request(`{ shop { name myshopifyDomain } }`);
-    return res.send({ ok: true, ...info, shop: r?.data?.shop ?? r?.shop ?? r });
-  } catch (e) {
-    return res.send({ ok: false, ...info, error: describeShopifyError(e) });
+  const versions = ["2024-10", "2025-01", "2025-04", "2025-07", "2025-10", "2026-01"];
+  const results = {};
+  for (const v of versions) {
+    try {
+      const client = new shopify.api.clients.Graphql({ session: raw, apiVersion: v });
+      const r = await client.request(`{ shop { name myshopifyDomain } }`);
+      results[v] = { ok: true, shop: r?.data?.shop ?? r?.shop ?? r };
+    } catch (e) {
+      results[v] = { ok: false, error: describeShopifyError(e) };
+    }
   }
+  return res.send({ ...info, results });
 });
 
 app.use("/api/*", shopify.validateAuthenticatedSession());
