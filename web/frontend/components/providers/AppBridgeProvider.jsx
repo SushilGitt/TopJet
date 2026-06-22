@@ -34,6 +34,15 @@ export function AppBridgeProvider({ children }) {
   // During the lifecycle of an app, these values should never be updated anyway.
   // Using state in this way is preferable to useMemo.
   // See: https://stackoverflow.com/questions/60482318/version-of-usememo-for-caching-a-value-that-will-never-change
+  // Resolve the API key from the build-time env var, falling back to the
+  // <meta name="shopify-api-key"> tag (always present in index.html). This keeps the
+  // embedded app working even if the bundle was built without SHOPIFY_API_KEY set.
+  const apiKey =
+    process.env.SHOPIFY_API_KEY ||
+    (typeof document !== "undefined"
+      ? document.querySelector('meta[name="shopify-api-key"]')?.content
+      : undefined);
+
   const [appBridgeConfig] = useState(() => {
     const host =
       new URLSearchParams(location.search).get("host") ||
@@ -43,13 +52,13 @@ export function AppBridgeProvider({ children }) {
 
     return {
       host,
-      apiKey: process.env.SHOPIFY_API_KEY,
+      apiKey,
       forceRedirect: true,
     };
   });
 
-  if (!process.env.SHOPIFY_API_KEY || !appBridgeConfig.host) {
-    const bannerProps = !process.env.SHOPIFY_API_KEY
+  if (!apiKey || !appBridgeConfig.host) {
+    const bannerProps = !apiKey
       ? {
           title: "Missing Shopify API Key",
           children: (
