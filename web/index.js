@@ -201,25 +201,31 @@ app.get("/api/debug/graphql", async (req, res) => {
     (await collection.findOne({ shop }));
   if (!raw) return res.status(404).send({ error: "no session for shop" });
   const token = raw.accessToken || "";
-  const info = {
-    id: raw.id,
-    isOnline: raw.isOnline,
-    tokenPrefix: token.slice(0, 6),
-    tokenLen: token.length,
-    scope: raw.scope,
-  };
-  const versions = ["2024-10", "2025-01", "2025-04", "2025-07", "2025-10", "2026-01"];
-  const results = {};
-  for (const v of versions) {
-    try {
-      const client = new shopify.api.clients.Graphql({ session: raw, apiVersion: v });
-      const r = await client.request(`{ shop { name myshopifyDomain } }`);
-      results[v] = { ok: true, shop: r?.data?.shop ?? r?.shop ?? r };
-    } catch (e) {
-      results[v] = { ok: false, error: describeShopifyError(e) };
-    }
+  try {
+    const resp = await fetch(`https://${shop}/admin/api/2025-07/graphql.json`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": token,
+      },
+      body: JSON.stringify({ query: "{ shop { name myshopifyDomain } }" }),
+    });
+    const body = await resp.text();
+    const headers = {};
+    resp.headers.forEach((v, k) => {
+      headers[k] = v;
+    });
+    return res.send({
+      tokenPrefix: token.slice(0, 6),
+      tokenLen: token.length,
+      scope: raw.scope,
+      status: resp.status,
+      headers,
+      body: body.slice(0, 1500),
+    });
+  } catch (e) {
+    return res.send({ error: describeShopifyError(e) });
   }
-  return res.send({ ...info, results });
 });
 
 app.use("/api/*", shopify.validateAuthenticatedSession());
