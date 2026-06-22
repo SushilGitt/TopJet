@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "866588ebf1c791f58652afae4e8cb9f2"
+client_id = "cbe3ae2a4fe9a56948625b85fafe317b"
 name = "TopJet"
-application_url = "https://scrollup.solnix.store"
+application_url = "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io"
 embedded = true
 
 [build]
@@ -22,12 +22,12 @@ use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://scrollup.solnix.store/auth/callback",
-  "https://scrollup.solnix.store/auth/shopify/callback",
-  "https://scrollup.solnix.store/api/auth/callback"
+  "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/auth/callback",
+  "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/auth/shopify/callback",
+  "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://scrollup.solnix.store/api/scroll-to-top"
+url = "https://mten86ajcg48lf3adl0h3xq5.91.239.208.85.sslip.io/api/scroll-to-top"
 subpath = "scroll-to-top"
 prefix = "apps"
