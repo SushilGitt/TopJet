@@ -17,7 +17,7 @@ const billingConfig = {
     interval: BillingInterval.Every30Days,
   },
   "Unlimited": {
-    amount: 100.0,
+    amount: 15.0,
     currencyCode: 'USD',
     interval: BillingInterval.Every30Days,
   }

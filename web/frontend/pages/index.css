@@ -13,7 +13,7 @@
 
 /* ───── Hero Section ───── */
 .hero-section {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+  background: linear-gradient(135deg, #28A745 0%, #1C7530 50%, #34D058 100%);
   color: #ffffff;
   padding: 56px 40px;
   border-radius: 20px;
@@ -170,21 +170,21 @@ ul.dark-list li::after {
 
 .plan-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.12);
-  border-color: #c7d2fe;
+  box-shadow: 0 20px 40px -12px rgba(40, 167, 69, 0.12);
+  border-color: #BFE6CB;
 }
 
 .plan-card.active {
-  border: 2px solid #4f46e5;
-  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.15);
-  background: linear-gradient(180deg, #faf9ff 0%, #ffffff 100%);
+  border: 2px solid #28A745;
+  box-shadow: 0 8px 24px -4px rgba(40, 167, 69, 0.15);
+  background: linear-gradient(180deg, #F4FBF6 0%, #ffffff 100%);
 }
 
 .plan-badge {
   position: absolute;
   top: -12px;
   right: 20px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #28A745, #1C7530);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
@@ -192,7 +192,7 @@ ul.dark-list li::after {
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
 }
 
 .plan-name {
@@ -213,7 +213,7 @@ ul.dark-list li::after {
 
 /* ───── Buttons ───── */
 .btn-dark {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: linear-gradient(135deg, #28A745, #1C7530);
   color: #ffffff;
   border: none;
   padding: 13px 24px;
@@ -223,12 +223,12 @@ ul.dark-list li::after {
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.25);
 }
 
 .btn-dark:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4338ca, #5b21b6);
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
+  background: linear-gradient(135deg, #1C7530, #14532D);
+  box-shadow: 0 4px 16px rgba(40, 167, 69, 0.35);
   transform: translateY(-1px);
 }
 
@@ -241,8 +241,8 @@ ul.dark-list li::after {
 
 .btn-light {
   background: #ffffff;
-  color: #4f46e5;
-  border: 1.5px solid #c7d2fe;
+  color: #28A745;
+  border: 1.5px solid #BFE6CB;
   padding: 13px 24px;
   border-radius: 10px;
   font-weight: 600;
@@ -253,8 +253,8 @@ ul.dark-list li::after {
 }
 
 .btn-light:hover:not(:disabled) {
-  background: #f5f3ff;
-  border-color: #a5b4fc;
+  background: #ECF8F0;
+  border-color: #86D99C;
 }
 
 .btn-light:disabled {
@@ -287,9 +287,9 @@ ul.dark-list li::after {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  background: linear-gradient(135deg, #eef2ff, #faf5ff);
+  background: linear-gradient(135deg, #E9F7EE, #F1FBF4);
   border-radius: 16px;
-  border: 1.5px solid #e0e7ff;
+  border: 1.5px solid #CDEBD6;
   padding: 28px 32px;
   margin-bottom: 24px;
 }

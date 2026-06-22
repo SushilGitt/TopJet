@@ -45,7 +45,7 @@ export default function Pricing() {
   const planPrices = {
     free: "0.00",
     basic: "10.00",
-    premium: "100.00",
+    premium: "15.00",
   };
 
   // Map backend tiers ➜ UI plans
@@ -248,10 +248,10 @@ export default function Pricing() {
   const glowIfCurrent = (plan) =>
     isCurrent(plan)
       ? {
-        boxShadow: "0 16px 40px rgba(79,70,229,0.18)",
-        border: "2px solid #4f46e5",
+        boxShadow: "0 16px 40px rgba(40,167,69,0.18)",
+        border: "2px solid #28A745",
         transform: "translateY(-4px)",
-        background: "linear-gradient(180deg, #faf9ff 0%, #ffffff 100%)",
+        background: "linear-gradient(180deg, #F4FBF6 0%, #ffffff 100%)",
       }
       : {};
 
@@ -291,26 +291,26 @@ export default function Pricing() {
 
   const badgePopular = {
     ...pillBase,
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#28A745",
     color: "#ffffff",
   };
 
   const badgeFull = {
     ...pillBase,
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#1C7530",
     color: "#ffffff",
   };
 
   const badgeCurrent = {
     ...pillBase,
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#28A745",
     color: "#ffffff",
   };
 
   const getAccentColor = (plan) => {
     if (plan === "free") return "#6b7280";
-    if (plan === "basic") return "#4f46e5";
-    return "#7c3aed";
+    if (plan === "basic") return "#28A745";
+    return "#1C7530";
   };
 
   const cardInner = {
@@ -425,8 +425,8 @@ export default function Pricing() {
             </div>
 
             {/* BASIC PLAN */}
-            <div className={`plan-card ${isCurrent("basic") ? "active" : ""}`} style={{ boxShadow: '0 20px 40px -10px rgba(79,70,229,0.12)', borderColor: isCurrent("basic") ? '#4f46e5' : '#c7d2fe', transform: 'scale(1.02)', zIndex: 2 }}>
-              {!isCurrent("basic") && <div className="plan-badge" style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff' }}>Most Popular</div>}
+            <div className={`plan-card ${isCurrent("basic") ? "active" : ""}`} style={{ boxShadow: '0 20px 40px -10px rgba(40,167,69,0.12)', borderColor: isCurrent("basic") ? '#28A745' : '#BFE6CB', transform: 'scale(1.02)', zIndex: 2 }}>
+              {!isCurrent("basic") && <div className="plan-badge" style={{ background: 'linear-gradient(135deg, #28A745, #1C7530)', color: '#fff' }}>Most Popular</div>}
               {isCurrent("basic") && <div className="plan-badge">Current Plan</div>}
 
               <span className="plan-name" style={{ color: getAccentColor("basic") }}>Basic</span>
@@ -445,7 +445,7 @@ export default function Pricing() {
 
               <button
                 className="btn-dark"
-                style={{ width: '100%', background: isCurrent("basic") ? '#ffffff' : undefined, color: isCurrent("basic") ? '#4f46e5' : undefined, border: isCurrent("basic") ? '1.5px solid #c7d2fe' : 'none' }}
+                style={{ width: '100%', background: isCurrent("basic") ? '#ffffff' : undefined, color: isCurrent("basic") ? '#28A745' : undefined, border: isCurrent("basic") ? '1.5px solid #BFE6CB' : 'none' }}
                 onClick={() => openConfirm("basic")}
                 disabled={isCurrent("basic") || loading.action === "basic"}
               >
@@ -457,7 +457,7 @@ export default function Pricing() {
             <div className={`plan-card ${isCurrent("premium") ? "active" : ""}`}>
               {isCurrent("premium") && <div className="plan-badge">Current Plan</div>}
               <span className="plan-name" style={{ color: getAccentColor("premium") }}>Premium</span>
-              <div className="plan-price">$100 <span style={{ fontSize: 16, color: '#a3a3a3', fontWeight: 400 }}>/ mo</span></div>
+              <div className="plan-price">$15 <span style={{ fontSize: 16, color: '#a3a3a3', fontWeight: 400 }}>/ mo</span></div>
               <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 24, minHeight: 60, lineHeight: 1.6 }}>
                 Every feature, every page, priority support included.
               </p>

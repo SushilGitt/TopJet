@@ -37,7 +37,7 @@ export default function HomePage() {
   // --- Prices map ---
   const planPrices = {
     basic: "10.00",
-    premium: "100.00",
+    premium: "15.00",
   };
 
   const planLabels = {
