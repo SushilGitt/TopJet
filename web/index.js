@@ -27,6 +27,16 @@ const STATIC_PATH =
 
 const app = express();
 
+// Keep the process alive on unexpected async errors. A single failing Shopify API
+// call (e.g. a 403) must surface as a clean JSON error, never crash the container
+// (which makes the proxy return 502s). describeShopifyError is hoisted below.
+process.on("unhandledRejection", (reason) => {
+  console.error("⚠️ Unhandled promise rejection:", describeShopifyError(reason));
+});
+process.on("uncaughtException", (err) => {
+  console.error("⚠️ Uncaught exception:", describeShopifyError(err));
+});
+
 // This app has no app-specific webhooks, and its mandatory compliance webhooks are
 // declared in the app config (`compliance_topics`) — i.e. managed declaratively.
 // The library's OAuth callback unconditionally calls api.webhooks.register(), which
@@ -142,6 +152,19 @@ app.get("/api/scroll-to-top/hasSubscription", async (req, res) => {
 });
 
 /* ---------------------- Subscription Utilities ---------------------- */
+
+// Extract the meaningful detail from a Shopify HttpResponseError so logs show the
+// real reason (e.g. WHY a request was forbidden) instead of "[Object]".
+function describeShopifyError(error) {
+  try {
+    const body = error?.response?.body ?? error?.body;
+    const detail = body?.errors ?? body ?? error?.message ?? error;
+    return typeof detail === "string" ? detail : JSON.stringify(detail);
+  } catch {
+    return error?.message || String(error);
+  }
+}
+
 async function getPlanTier(session) {
   try {
     const hasUnlimited = await shopify.api.billing.check({
@@ -160,7 +183,7 @@ async function getPlanTier(session) {
 
     return "free";
   } catch (error) {
-    console.error("Error checking plan tier:", error);
+    console.error("Error checking plan tier:", describeShopifyError(error));
     return "free";
   }
 }
@@ -237,8 +260,9 @@ app.get("/api/createSubscription", async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("❌ Failed to create subscription:", error);
-    res.status(500).send({ error: "Failed to create subscription" });
+    const detail = describeShopifyError(error);
+    console.error("❌ Failed to create subscription:", detail);
+    res.status(500).send({ error: "Failed to create subscription", detail });
   }
 });
 
@@ -294,8 +318,9 @@ app.get("/api/cancelSubscription", async (req, res) => {
 
     res.status(200).send({ status: "No subscription found" });
   } catch (error) {
-    console.error("❌ Failed to cancel subscription:", error);
-    res.status(500).send({ error: "Failed to cancel subscription" });
+    const detail = describeShopifyError(error);
+    console.error("❌ Failed to cancel subscription:", detail);
+    res.status(500).send({ error: "Failed to cancel subscription", detail });
   }
 });
 
@@ -344,8 +369,9 @@ app.get("/api/hasActiveSubscription", async (_req, res) => {
 
     res.status(200).send({ hasActiveSubscription: true, tier });
   } catch (error) {
-    console.error("❌ Failed to fetch subscription:", error);
-    res.status(500).send({ error: "Failed to fetch subscription" });
+    const detail = describeShopifyError(error);
+    console.error("❌ Failed to fetch subscription:", detail);
+    res.status(500).send({ error: "Failed to fetch subscription", detail });
   }
 });
 
