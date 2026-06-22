@@ -190,6 +190,30 @@ async function getPlanTier(session) {
 
 /* ---------------------- Analytics Event Logging ---------------------- */
 
+// TEMP DIAGNOSTIC: run a plain (non-billing) shop query with the stored token to
+// determine whether ALL Admin GraphQL is forbidden or only billing. Remove after use.
+app.get("/api/debug/graphql", async (req, res) => {
+  const { shop } = req.query;
+  if (!shop) return res.status(400).send({ error: "missing shop" });
+  const collection = await connectToMongoDB();
+  const raw =
+    (await collection.findOne({ id: `offline_${shop}` })) ||
+    (await collection.findOne({ shop }));
+  if (!raw) return res.status(404).send({ error: "no session for shop" });
+  const info = {
+    id: raw.id,
+    isOnline: raw.isOnline,
+    tokenLen: (raw.accessToken || "").length,
+    scope: raw.scope,
+  };
+  try {
+    const client = new shopify.api.clients.Graphql({ session: raw });
+    const r = await client.request(`{ shop { name myshopifyDomain } }`);
+    return res.send({ ok: true, ...info, shop: r?.data?.shop ?? r?.shop ?? r });
+  } catch (e) {
+    return res.send({ ok: false, ...info, error: describeShopifyError(e) });
+  }
+});
 
 app.use("/api/*", shopify.validateAuthenticatedSession());
 
