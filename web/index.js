@@ -7,7 +7,6 @@ import serveStatic from "serve-static";
 import shopify from "./shopify.js";
 import productCreator from "./product-creator.js";
 import cancelSubscription from "./cancel-subscription.js";
-import GDPRWebhookHandlers from "./gdpr.js";
 import crypto from "crypto";
 import dotenv from "dotenv";
 
@@ -49,9 +48,40 @@ app.get(
   },
   shopify.redirectToShopifyOrAppRoot()
 );
+// Mandatory GDPR/compliance webhooks (customers/data_request, customers/redact,
+// shop/redact) are declared in the app config (toml `compliance_topics`) and are
+// delivered automatically by Shopify — they must NOT be registered via the Admin
+// API. Registering customer topics on an app without Protected Customer Data Access
+// returns HTTP 403, which aborts OAuth. So we simply receive them here, verify the
+// HMAC, and acknowledge with 200. (Registry stays empty → OAuth no longer 403s.)
 app.post(
   shopify.config.webhooks.path,
-  shopify.processWebhooks({ webhookHandlers: GDPRWebhookHandlers })
+  express.raw({ type: "*/*" }),
+  (req, res) => {
+    try {
+      const hmac = req.get("X-Shopify-Hmac-Sha256") || "";
+      const digest = crypto
+        .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
+        .update(req.body) // raw Buffer
+        .digest("base64");
+      const ok =
+        hmac.length === digest.length &&
+        crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(digest));
+      if (!ok) {
+        console.warn("⚠️ Webhook HMAC validation failed");
+        return res.status(401).send();
+      }
+      console.log(
+        `✅ Compliance webhook received: ${req.get("X-Shopify-Topic")} for ${req.get(
+          "X-Shopify-Shop-Domain"
+        )}`
+      );
+      return res.status(200).send();
+    } catch (e) {
+      console.error("Webhook handler error:", e.message);
+      return res.status(401).send();
+    }
+  }
 );
 
 // If you are adding routes outside of the /api path, remember to
