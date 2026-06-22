@@ -5,6 +5,7 @@ import express from "express";
 import serveStatic from "serve-static";
 
 import shopify from "./shopify.js";
+import { RequestedTokenType } from "@shopify/shopify-api";
 import productCreator from "./product-creator.js";
 import cancelSubscription from "./cancel-subscription.js";
 import crypto from "crypto";
@@ -228,7 +229,56 @@ app.get("/api/debug/graphql", async (req, res) => {
   }
 });
 
-app.use("/api/*", shopify.validateAuthenticatedSession());
+// Modern token-exchange auth. The legacy OAuth flow issues NON-expiring offline
+// tokens, which Shopify's Admin API now rejects with a 403. Instead, exchange the
+// App Bridge session token for a fresh EXPIRING offline token on demand, and cache
+// it (overwriting any rejected non-expiring token) until it expires.
+async function authenticateApiRequest(req, res, next) {
+  try {
+    const authHeader = req.get("Authorization") || "";
+    const sessionToken = authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+
+    if (!sessionToken) {
+      // No session token yet — tell App Bridge to retry with one.
+      res.status(401).setHeader("X-Shopify-Retry-Invalid-Session-Request", "1");
+      return res.send();
+    }
+
+    const payload = await shopify.api.session.decodeSessionToken(sessionToken);
+    const shop = new URL(payload.dest).hostname;
+
+    // Reuse a stored offline session only if it's an expiring token still in date.
+    const offlineId = shopify.api.session.getOfflineId(shop);
+    let session = await shopify.config.sessionStorage.loadSession(offlineId);
+    const stillValid =
+      session &&
+      session.accessToken &&
+      session.expires &&
+      new Date(session.expires) > new Date();
+
+    if (!stillValid) {
+      const result = await shopify.api.auth.tokenExchange({
+        shop,
+        sessionToken,
+        requestedTokenType: RequestedTokenType.OfflineAccessToken,
+      });
+      session = result.session;
+      await shopify.config.sessionStorage.storeSession(session);
+      console.log(`🔑 Minted fresh expiring offline token for ${shop}`);
+    }
+
+    res.locals.shopify = { session };
+    return next();
+  } catch (e) {
+    console.error("Auth (token exchange) failed:", describeShopifyError(e));
+    res.status(401).setHeader("X-Shopify-Retry-Invalid-Session-Request", "1");
+    return res.send();
+  }
+}
+
+app.use("/api/*", authenticateApiRequest);
 
 /* ---------------------- Utility Functions ---------------------- */
 const handleError = (res, statusCode, message) => {
