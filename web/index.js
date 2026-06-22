@@ -114,6 +114,8 @@ const Custom_app = "custom";
 const PREMIUM_PLAN_KEY = "scroll-2-top-premium";
 const IS_TEST = true; // Use true for testing billing in Development
 const APP_NAME = "TopJet";
+// App handle (Partner Dashboard) — used to build the Managed Pricing page URL.
+const APP_HANDLE = process.env.SHOPIFY_APP_HANDLE || "topjet";
 const HTTP_STATUS = { OK: 200, BAD_REQUEST: 400, UNAUTHORIZED: 401, INTERNAL_SERVER_ERROR: 500 };
 
 app.use(express.json());
@@ -166,22 +168,19 @@ function describeShopifyError(error) {
   }
 }
 
+// Managed Pricing: billing.check() returns the shop's active app subscriptions; the
+// subscription's `name` is the plan handle (free / premium / unlimited) set in the
+// Partner Dashboard. Those handles map 1:1 to our tier names.
 async function getPlanTier(session) {
   try {
-    const hasUnlimited = await shopify.api.billing.check({
-      session,
-      plans: [UNLIMITED_PLAN],
-      isTest: IS_TEST,
-    });
-    if (hasUnlimited) return "unlimited";
-
-    const hasPremium = await shopify.api.billing.check({
-      session,
-      plans: [PREMIUM_PLAN],
-      isTest: IS_TEST,
-    });
-    if (hasPremium) return "premium";
-
+    const result = await shopify.api.billing.check({ session });
+    const active = (result?.appSubscriptions || []).find(
+      (s) => s.status === "ACTIVE"
+    );
+    const handle = (active?.name || "").toLowerCase();
+    console.log(`📦 plan tier for ${session.shop}: handle="${handle}"`);
+    if (handle === "unlimited") return "unlimited";
+    if (handle === "premium") return "premium";
     return "free";
   } catch (error) {
     console.error("Error checking plan tier:", describeShopifyError(error));
@@ -190,44 +189,6 @@ async function getPlanTier(session) {
 }
 
 /* ---------------------- Analytics Event Logging ---------------------- */
-
-// TEMP DIAGNOSTIC: run a plain (non-billing) shop query with the stored token to
-// determine whether ALL Admin GraphQL is forbidden or only billing. Remove after use.
-app.get("/api/debug/graphql", async (req, res) => {
-  const { shop } = req.query;
-  if (!shop) return res.status(400).send({ error: "missing shop" });
-  const collection = await connectToMongoDB();
-  const raw =
-    (await collection.findOne({ id: `offline_${shop}` })) ||
-    (await collection.findOne({ shop }));
-  if (!raw) return res.status(404).send({ error: "no session for shop" });
-  const token = raw.accessToken || "";
-  try {
-    const resp = await fetch(`https://${shop}/admin/api/2025-07/graphql.json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify({ query: "{ shop { name myshopifyDomain } }" }),
-    });
-    const body = await resp.text();
-    const headers = {};
-    resp.headers.forEach((v, k) => {
-      headers[k] = v;
-    });
-    return res.send({
-      tokenPrefix: token.slice(0, 6),
-      tokenLen: token.length,
-      scope: raw.scope,
-      status: resp.status,
-      headers,
-      body: body.slice(0, 1500),
-    });
-  } catch (e) {
-    return res.send({ error: describeShopifyError(e) });
-  }
-});
 
 // Modern token-exchange auth. The legacy OAuth flow issues NON-expiring offline
 // tokens, which Shopify's Admin API now rejects with a 403. Instead, exchange the
@@ -321,31 +282,11 @@ const shopDetailsQuery = `
 app.get("/api/createSubscription", async (req, res) => {
   try {
     const session = res.locals.shopify.session;
-    const planParam = (req.query.plan || "").toString().toLowerCase();
-    const planName = planParam === "unlimited" ? UNLIMITED_PLAN : PREMIUM_PLAN;
-
-    const hasPayment = await shopify.api.billing.check({
-      session,
-      plans: [planName],
-      isTest: IS_TEST,
-    });
-
-    if (hasPayment) {
-   
-      res.status(200).send({ isActiveSubscription: true, plan: planName });
-    } else {
-      
-      const redirectUrl = await shopify.api.billing.request({
-        session,
-        plan: planName,
-        isTest: IS_TEST,
-      });
-      res.status(200).send({
-        isActiveSubscription: false,
-        plan: planName,
-        confirmationUrl: redirectUrl,
-      });
-    }
+    // Managed Pricing is selected/confirmed on Shopify's hosted pricing page, not via
+    // the API. Send the merchant there; the frontend redirects to confirmationUrl.
+    const store = session.shop.replace(".myshopify.com", "");
+    const confirmationUrl = `https://admin.shopify.com/store/${store}/charges/${APP_HANDLE}/pricing_plans`;
+    return res.status(200).send({ isActiveSubscription: false, confirmationUrl });
   } catch (error) {
     const detail = describeShopifyError(error);
     console.error("❌ Failed to create subscription:", detail);
@@ -358,11 +299,10 @@ app.get("/api/cancelSubscription", async (req, res) => {
   try {
     const session = res.locals.shopify.session;
 
-    const hasPremium = await shopify.api.billing.check({ session, plans: [PREMIUM_PLAN], isTest: IS_TEST });
-    const hasUnlimited = await shopify.api.billing.check({ session, plans: [UNLIMITED_PLAN], isTest: IS_TEST });
+    const tier = await getPlanTier(session);
 
-    if (hasPremium || hasUnlimited) {
-      const planToCancel = hasUnlimited ? UNLIMITED_PLAN : PREMIUM_PLAN;
+    if (tier !== "free") {
+      const planToCancel = tier;
   
 
       const subscriptionStatus = await cancelSubscription(session);

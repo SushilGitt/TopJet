@@ -1,4 +1,4 @@
-import { BillingInterval, LATEST_API_VERSION } from "@shopify/shopify-api";
+import { LATEST_API_VERSION } from "@shopify/shopify-api";
 import { shopifyApp } from "@shopify/shopify-app-express";
 import {MongoDBSessionStorage} from '@shopify/shopify-app-session-storage-mongodb';
 import { restResources } from "@shopify/shopify-api/rest/admin/2023-04";
@@ -8,21 +8,6 @@ import dotenv from "dotenv";
 dotenv.config({ path: join(process.cwd(), '../.env') });
 
 
-// The transactions with Shopify will always be marked as test transactions, unless NODE_ENV is production.
-// See the ensureBilling helper to learn more about billing in this template.
-const billingConfig = {
-  "Premium": {
-    amount: 10.0,
-    currencyCode: 'USD',
-    interval: BillingInterval.Every30Days,
-  },
-  "Unlimited": {
-    amount: 15.0,
-    currencyCode: 'USD',
-    interval: BillingInterval.Every30Days,
-  }
-};
-
 const shopify = shopifyApp({
   api: {
     apiVersion: LATEST_API_VERSION,
@@ -31,7 +16,9 @@ const shopify = shopifyApp({
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
     hostName: process.env.HOST.replace(/https?:\/\//, ""),
     scopes: process.env.SCOPES.split(","),
-    billing: billingConfig, // or replace with billingConfig above to enable example billing
+    // Shopify Managed Pricing: plans are defined in the Partner Dashboard (handles
+    // free/premium/unlimited). No in-code billing config; check payments via the flag.
+    future: { unstable_managedPricingSupport: true },
   },
   auth: {
     path: "/api/auth",
