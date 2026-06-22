@@ -164,7 +164,7 @@ export default function HomePage() {
         {/* DARK HIGH-END HERO SECTION */}
         <div className="hero-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '48px', alignItems: 'center' }}>
           <div style={{ flex: '1 1 300px', position: 'relative', zIndex: 1 }}>
-            <span className="kicker">Scroll Up Pro</span>
+            <span className="kicker">TopJet</span>
             <h1 className="hero-heading">
               One-tap back to top.<br />Smooth & beautiful.
             </h1>

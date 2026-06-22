@@ -3,7 +3,7 @@
 client_id = "220aaa3f99ef967f2b678b1b63cdd57a"
 application_url = "https://app9.meroxioapps.com/"
 embedded = true
-name = "Scroll Up Pro"
+name = "TopJet"
 handle = "scroll-up-pro"
 
 [webhooks]

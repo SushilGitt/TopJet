@@ -63,7 +63,7 @@ const UNLIMITED_PLAN = "Unlimited";
 const Custom_app = "custom";
 const PREMIUM_PLAN_KEY = "scroll-2-top-premium";
 const IS_TEST = true; // Use true for testing billing in Development
-const APP_NAME = "Scroll Up Pro";
+const APP_NAME = "TopJet";
 const HTTP_STATUS = { OK: 200, BAD_REQUEST: 400, UNAUTHORIZED: 401, INTERNAL_SERVER_ERROR: 500 };
 
 app.use(express.json());

@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "866588ebf1c791f58652afae4e8cb9f2"
-name = "Scroll Up Pro"
+name = "TopJet"
 application_url = "https://scrollup.solnix.store"
 embedded = true
 
@@ -10,6 +10,10 @@ automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2026-04"
+
+  [[webhooks.subscriptions]]
+  uri = "/api/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
