@@ -27,6 +27,15 @@ const STATIC_PATH =
 
 const app = express();
 
+// This app has no app-specific webhooks, and its mandatory compliance webhooks are
+// declared in the app config (`compliance_topics`) — i.e. managed declaratively.
+// The library's OAuth callback unconditionally calls api.webhooks.register(), which
+// first runs a `webhookSubscriptions` GraphQL query. Shopify returns 403 for webhook
+// API access when webhooks are config-managed, and that thrown 403 aborts OAuth
+// (install loop). Every other GraphQL call (billing, metafields) works fine, so we
+// make runtime webhook registration a no-op to let OAuth complete.
+shopify.api.webhooks.register = async () => ({});
+
 // Set up Shopify authentication and webhook handling
 app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
