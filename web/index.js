@@ -195,10 +195,10 @@ async function getPlanTier(session) {
 
 /* ---------------------- Analytics Event Logging ---------------------- */
 
-// Modern token-exchange auth. The legacy OAuth flow issues NON-expiring offline
-// tokens, which Shopify's Admin API now rejects with a 403. Instead, exchange the
-// App Bridge session token for a fresh EXPIRING offline token on demand, and cache
-// it (overwriting any rejected non-expiring token) until it expires.
+// Auth via token exchange. This app's OFFLINE tokens are non-expiring, which the
+// Admin API now rejects with 403. ONLINE access tokens are always expiring, so we
+// use those for embedded API calls — exchange a fresh one per request from the App
+// Bridge session token.
 async function authenticateApiRequest(req, res, next) {
   try {
     const authHeader = req.get("Authorization") || "";
@@ -215,25 +215,12 @@ async function authenticateApiRequest(req, res, next) {
     const payload = await shopify.api.session.decodeSessionToken(sessionToken);
     const shop = new URL(payload.dest).hostname;
 
-    // Reuse a stored offline session only if it's an expiring token still in date.
-    const offlineId = shopify.api.session.getOfflineId(shop);
-    let session = await shopify.config.sessionStorage.loadSession(offlineId);
-    const stillValid =
-      session &&
-      session.accessToken &&
-      session.expires &&
-      new Date(session.expires) > new Date();
-
-    if (!stillValid) {
-      const result = await shopify.api.auth.tokenExchange({
-        shop,
-        sessionToken,
-        requestedTokenType: RequestedTokenType.OfflineAccessToken,
-      });
-      session = result.session;
-      await shopify.config.sessionStorage.storeSession(session);
-      console.log(`🔑 Minted offline token for ${shop} (expires=${session.expires})`);
-    }
+    const { session } = await shopify.api.auth.tokenExchange({
+      shop,
+      sessionToken,
+      requestedTokenType: RequestedTokenType.OnlineAccessToken,
+    });
+    console.log(`🔑 Online token for ${shop} (expires=${session.expires})`);
 
     res.locals.shopify = { session };
     return next();
