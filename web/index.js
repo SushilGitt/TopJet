@@ -108,14 +108,13 @@ app.post(
 // also add a proxy rule for them in web/frontend/vite.config.js
 
 
+// Billing API plan names (must match the keys in web/shopify.js billingConfig).
+const BASIC_PLAN = "Basic";
 const PREMIUM_PLAN = "Premium";
-const UNLIMITED_PLAN = "Unlimited";
 const Custom_app = "custom";
 const PREMIUM_PLAN_KEY = "scroll-2-top-premium";
 const IS_TEST = true; // Use true for testing billing in Development
 const APP_NAME = "TopJet";
-// App handle (Partner Dashboard) — used to build the Managed Pricing page URL.
-const APP_HANDLE = process.env.SHOPIFY_APP_HANDLE || "topjet";
 const HTTP_STATUS = { OK: 200, BAD_REQUEST: 400, UNAUTHORIZED: 401, INTERNAL_SERVER_ERROR: 500 };
 
 app.use(express.json());
@@ -170,17 +169,23 @@ function describeShopifyError(error) {
 
 // Managed Pricing: billing.check() returns the shop's active app subscriptions; the
 // subscription's `name` is the plan handle (free / premium / unlimited) set in the
-// Partner Dashboard. Those handles map 1:1 to our tier names.
+// Billing API: check active recurring charges against the code-defined plans.
 async function getPlanTier(session) {
   try {
-    const result = await shopify.api.billing.check({ session });
-    const active = (result?.appSubscriptions || []).find(
-      (s) => s.status === "ACTIVE"
-    );
-    const handle = (active?.name || "").toLowerCase();
-    console.log(`📦 plan tier for ${session.shop}: handle="${handle}"`);
-    if (handle === "unlimited") return "unlimited";
-    if (handle === "premium") return "premium";
+    const hasPremium = await shopify.api.billing.check({
+      session,
+      plans: [PREMIUM_PLAN],
+      isTest: IS_TEST,
+    });
+    if (hasPremium) return "premium";
+
+    const hasBasic = await shopify.api.billing.check({
+      session,
+      plans: [BASIC_PLAN],
+      isTest: IS_TEST,
+    });
+    if (hasBasic) return "basic";
+
     return "free";
   } catch (error) {
     console.error("Error checking plan tier:", describeShopifyError(error));
@@ -227,7 +232,7 @@ async function authenticateApiRequest(req, res, next) {
       });
       session = result.session;
       await shopify.config.sessionStorage.storeSession(session);
-      console.log(`🔑 Minted fresh expiring offline token for ${shop}`);
+      console.log(`🔑 Minted offline token for ${shop} (expires=${session.expires})`);
     }
 
     res.locals.shopify = { session };
@@ -238,24 +243,6 @@ async function authenticateApiRequest(req, res, next) {
     return res.send();
   }
 }
-
-// TEMP: read the app's real handle (managed-pricing URL needs it). Remove after use.
-app.get("/api/debug/apphandle", async (req, res) => {
-  const { shop } = req.query;
-  if (!shop) return res.status(400).send({ error: "missing shop" });
-  const collection = await connectToMongoDB();
-  const raw =
-    (await collection.findOne({ id: `offline_${shop}` })) ||
-    (await collection.findOne({ shop }));
-  if (!raw) return res.status(404).send({ error: "no session" });
-  try {
-    const client = new shopify.api.clients.Graphql({ session: raw });
-    const r = await client.request(`{ currentAppInstallation { app { id handle title } } }`);
-    return res.send({ ok: true, app: r?.data?.currentAppInstallation?.app ?? r });
-  } catch (e) {
-    return res.send({ ok: false, error: describeShopifyError(e) });
-  }
-});
 
 app.use("/api/*", authenticateApiRequest);
 
@@ -300,47 +287,31 @@ const shopDetailsQuery = `
 app.get("/api/createSubscription", async (req, res) => {
   try {
     const session = res.locals.shopify.session;
-    // Managed Pricing is selected/confirmed on Shopify's hosted pricing page, not via
-    // the API. Send the merchant there; the frontend redirects to confirmationUrl.
-    const store = session.shop.replace(".myshopify.com", "");
+    const planParam = (req.query.plan || "").toString().toLowerCase();
+    const planName = planParam === "premium" ? PREMIUM_PLAN : BASIC_PLAN;
 
-    // TEMP PROBE: capture the token's expiry + the raw GraphQL response so we can see
-    // why the fresh (token-exchanged) token is still 403'ing.
-    try {
-      const probe = await fetch(`https://${session.shop}/admin/api/2025-07/graphql.json`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": session.accessToken || "",
-        },
-        body: JSON.stringify({ query: "{ currentAppInstallation { app { handle } } }" }),
-      });
-      const pbody = await probe.text();
-      console.log(
-        `🔎 PROBE status=${probe.status} expires=${session.expires} ` +
-          `tokenPrefix=${(session.accessToken || "").slice(0, 6)} body=${pbody.slice(0, 500)}`
-      );
-    } catch (e) {
-      console.log("PROBE error:", e.message);
+    // Already subscribed to this plan?
+    const hasPayment = await shopify.api.billing.check({
+      session,
+      plans: [planName],
+      isTest: IS_TEST,
+    });
+    if (hasPayment) {
+      return res.status(200).send({ isActiveSubscription: true, plan: planName });
     }
 
-    // Resolve the app handle straight from Shopify so the URL is always correct
-    // (a wrong handle silently redirects to the installed-apps page).
-    let appHandle = APP_HANDLE;
-    try {
-      const client = new shopify.api.clients.Graphql({ session });
-      const r = await client.request(`{ currentAppInstallation { app { handle } } }`);
-      const h =
-        r?.data?.currentAppInstallation?.app?.handle ??
-        r?.currentAppInstallation?.app?.handle;
-      if (h) appHandle = h;
-    } catch (e) {
-      console.warn("App handle lookup failed, using fallback:", describeShopifyError(e));
-    }
-
-    const confirmationUrl = `https://admin.shopify.com/store/${store}/charges/${appHandle}/pricing_plans`;
-    console.log(`💳 createSubscription → ${confirmationUrl}`);
-    return res.status(200).send({ isActiveSubscription: false, confirmationUrl });
+    // Create the recurring charge and hand back Shopify's approval URL.
+    const confirmationUrl = await shopify.api.billing.request({
+      session,
+      plan: planName,
+      isTest: IS_TEST,
+    });
+    console.log(`💳 createSubscription ${planName} → ${confirmationUrl}`);
+    return res.status(200).send({
+      isActiveSubscription: false,
+      plan: planName,
+      confirmationUrl,
+    });
   } catch (error) {
     const detail = describeShopifyError(error);
     console.error("❌ Failed to create subscription:", detail);

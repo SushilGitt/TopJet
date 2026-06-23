@@ -19,7 +19,8 @@ api_version = "2026-07"
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products,read_products"
-use_legacy_install_flow = true
+# Shopify-managed install (no use_legacy_install_flow) so token exchange issues
+# EXPIRING offline tokens — non-expiring tokens are rejected by the Admin API.
 
 [auth]
 redirect_urls = [

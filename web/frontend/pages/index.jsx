@@ -55,8 +55,8 @@ export default function HomePage() {
     if (subscriptionData && subscriptionData.tier) {
       // Map backend tiers → frontend tiers
       let frontendTier = "free";
-      if (subscriptionData.tier === "premium") frontendTier = "basic";
-      if (subscriptionData.tier === "unlimited") frontendTier = "premium";
+      if (subscriptionData.tier === "basic") frontendTier = "basic";
+      if (subscriptionData.tier === "premium") frontendTier = "premium";
       setSelectedPlan(frontendTier);
     }
   }, [subscriptionData]);
@@ -105,9 +105,7 @@ export default function HomePage() {
     setLoadingPlan(confirmPlan);
 
     // Map frontend → backend values
-    let backendPlan = confirmPlan;
-    if (confirmPlan === "basic") backendPlan = "premium"; // frontend basic = backend premium
-    if (confirmPlan === "premium") backendPlan = "unlimited"; // frontend premium = backend unlimited
+    const backendPlan = confirmPlan; // "basic" or "premium" — matches billingConfig
 
     try {
       const res = await fetch(`/api/createSubscription?plan=${backendPlan}`);

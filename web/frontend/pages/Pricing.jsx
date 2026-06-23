@@ -52,8 +52,8 @@ export default function Pricing() {
   const selectedPlan = useMemo(() => {
     if (!serverTier) return null;
     if (serverTier === "free") return "free";
-    if (serverTier === "premium") return "basic";
-    if (serverTier === "unlimited") return "premium";
+    if (serverTier === "basic") return "basic";
+    if (serverTier === "premium") return "premium";
     return "free";
   }, [serverTier]);
 
@@ -164,7 +164,7 @@ export default function Pricing() {
       }
 
       // Map UI plan ➜ backend plan
-      const backendPlan = targetPlan === "basic" ? "premium" : "unlimited";
+      const backendPlan = targetPlan; // "basic" or "premium" — matches billingConfig
 
       const res = await fetchAuth(
         `/api/createSubscription?plan=${backendPlan}`

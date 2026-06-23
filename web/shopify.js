@@ -1,4 +1,4 @@
-import { LATEST_API_VERSION } from "@shopify/shopify-api";
+import { BillingInterval, LATEST_API_VERSION } from "@shopify/shopify-api";
 import { shopifyApp } from "@shopify/shopify-app-express";
 import {MongoDBSessionStorage} from '@shopify/shopify-app-session-storage-mongodb';
 import { restResources } from "@shopify/shopify-api/rest/admin/2023-04";
@@ -7,6 +7,19 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: join(process.cwd(), '../.env') });
 
+// Code-based Billing API plans (free is just "no subscription").
+const billingConfig = {
+  "Basic": {
+    amount: 10.0,
+    currencyCode: "USD",
+    interval: BillingInterval.Every30Days,
+  },
+  "Premium": {
+    amount: 15.0,
+    currencyCode: "USD",
+    interval: BillingInterval.Every30Days,
+  },
+};
 
 const shopify = shopifyApp({
   api: {
@@ -16,9 +29,7 @@ const shopify = shopifyApp({
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
     hostName: process.env.HOST.replace(/https?:\/\//, ""),
     scopes: process.env.SCOPES.split(","),
-    // Shopify Managed Pricing: plans are defined in the Partner Dashboard (handles
-    // free/premium/unlimited). No in-code billing config; check payments via the flag.
-    future: { unstable_managedPricingSupport: true },
+    billing: billingConfig,
   },
   auth: {
     path: "/api/auth",
