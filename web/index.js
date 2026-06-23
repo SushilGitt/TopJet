@@ -304,6 +304,26 @@ app.get("/api/createSubscription", async (req, res) => {
     // the API. Send the merchant there; the frontend redirects to confirmationUrl.
     const store = session.shop.replace(".myshopify.com", "");
 
+    // TEMP PROBE: capture the token's expiry + the raw GraphQL response so we can see
+    // why the fresh (token-exchanged) token is still 403'ing.
+    try {
+      const probe = await fetch(`https://${session.shop}/admin/api/2025-07/graphql.json`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": session.accessToken || "",
+        },
+        body: JSON.stringify({ query: "{ currentAppInstallation { app { handle } } }" }),
+      });
+      const pbody = await probe.text();
+      console.log(
+        `🔎 PROBE status=${probe.status} expires=${session.expires} ` +
+          `tokenPrefix=${(session.accessToken || "").slice(0, 6)} body=${pbody.slice(0, 500)}`
+      );
+    } catch (e) {
+      console.log("PROBE error:", e.message);
+    }
+
     // Resolve the app handle straight from Shopify so the URL is always correct
     // (a wrong handle silently redirects to the installed-apps page).
     let appHandle = APP_HANDLE;
