@@ -113,7 +113,8 @@ const BASIC_PLAN = "Basic";
 const PREMIUM_PLAN = "Premium";
 const Custom_app = "custom";
 const PREMIUM_PLAN_KEY = "scroll-2-top-premium";
-const IS_TEST = true; // Use true for testing billing in Development
+const IS_TEST = false; // false = real charges (live billing). Note: real charges only
+// work on real merchant stores, not development stores.
 const APP_NAME = "TopJet";
 const HTTP_STATUS = { OK: 200, BAD_REQUEST: 400, UNAUTHORIZED: 401, INTERNAL_SERVER_ERROR: 500 };
 
