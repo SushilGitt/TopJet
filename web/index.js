@@ -239,6 +239,24 @@ async function authenticateApiRequest(req, res, next) {
   }
 }
 
+// TEMP: read the app's real handle (managed-pricing URL needs it). Remove after use.
+app.get("/api/debug/apphandle", async (req, res) => {
+  const { shop } = req.query;
+  if (!shop) return res.status(400).send({ error: "missing shop" });
+  const collection = await connectToMongoDB();
+  const raw =
+    (await collection.findOne({ id: `offline_${shop}` })) ||
+    (await collection.findOne({ shop }));
+  if (!raw) return res.status(404).send({ error: "no session" });
+  try {
+    const client = new shopify.api.clients.Graphql({ session: raw });
+    const r = await client.request(`{ currentAppInstallation { app { id handle title } } }`);
+    return res.send({ ok: true, app: r?.data?.currentAppInstallation?.app ?? r });
+  } catch (e) {
+    return res.send({ ok: false, error: describeShopifyError(e) });
+  }
+});
+
 app.use("/api/*", authenticateApiRequest);
 
 /* ---------------------- Utility Functions ---------------------- */
@@ -285,7 +303,23 @@ app.get("/api/createSubscription", async (req, res) => {
     // Managed Pricing is selected/confirmed on Shopify's hosted pricing page, not via
     // the API. Send the merchant there; the frontend redirects to confirmationUrl.
     const store = session.shop.replace(".myshopify.com", "");
-    const confirmationUrl = `https://admin.shopify.com/store/${store}/charges/${APP_HANDLE}/pricing_plans`;
+
+    // Resolve the app handle straight from Shopify so the URL is always correct
+    // (a wrong handle silently redirects to the installed-apps page).
+    let appHandle = APP_HANDLE;
+    try {
+      const client = new shopify.api.clients.Graphql({ session });
+      const r = await client.request(`{ currentAppInstallation { app { handle } } }`);
+      const h =
+        r?.data?.currentAppInstallation?.app?.handle ??
+        r?.currentAppInstallation?.app?.handle;
+      if (h) appHandle = h;
+    } catch (e) {
+      console.warn("App handle lookup failed, using fallback:", describeShopifyError(e));
+    }
+
+    const confirmationUrl = `https://admin.shopify.com/store/${store}/charges/${appHandle}/pricing_plans`;
+    console.log(`💳 createSubscription → ${confirmationUrl}`);
     return res.status(200).send({ isActiveSubscription: false, confirmationUrl });
   } catch (error) {
     const detail = describeShopifyError(error);
